@@ -146,9 +146,61 @@ label { display: block; text-align: left; font-weight: 600; margin-top: .8rem; c
   border-radius: 12px; padding: .6rem 1rem; }
 .profile-row span:first-child { flex: 1; font-weight: 600; }
 
+/* buddy (dress-up) */
+.buddy-card { display: flex; align-items: center; gap: 1rem; background: var(--card);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 1rem 1.2rem; margin: 1rem 0; }
+.buddy-mini svg { display: block; }
+.buddy-info { display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; }
+.shells-badge { background: #eaf6fb; color: #1d6a86; font-weight: 700; padding: .3rem .8rem; border-radius: 20px; }
+.shells-badge.big { font-size: 1.1rem; }
+.shells-earned { font-size: 1.3rem; font-weight: 800; color: #1d6a86; margin: .4rem 0; }
+.buddy-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; align-items: start; }
+.buddy-stage { position: sticky; top: 1rem; background: #eaf7fb; border-radius: var(--radius); padding: 1rem; text-align: center; }
+.buddy-avatar svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+.buddy-msg { min-height: 1.4em; font-weight: 600; color: var(--good); margin-top: .5rem; }
+.shop-grid { display: flex; flex-direction: column; }
+.slot-label { font-weight: 700; color: var(--muted); text-transform: uppercase; font-size: .8rem; letter-spacing: .05em; margin: .8rem 0 .4rem; }
+.slot-row { display: flex; flex-wrap: wrap; gap: .6rem; }
+.item-card { display: flex; flex-direction: column; align-items: center; gap: .3rem; width: 100px;
+  background: var(--card); border: 2px solid var(--line); border-radius: 12px; padding: .7rem .4rem; }
+.item-card:hover { border-color: var(--brand); }
+.item-card.on { border-color: var(--good); background: #f0fbf4; }
+.item-card.locked { opacity: .9; }
+.item-swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(0,0,0,.15); }
+.item-name { font-size: .85rem; font-weight: 600; text-align: center; line-height: 1.2; }
+.item-price { font-size: .8rem; color: var(--muted); }
+.item-card.on .item-price { color: var(--good); font-weight: 700; }
+.buddy-btns { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+/* turtle mini-game */
+.game-screen { display: flex; justify-content: center; }
+.game-wrap { width: 100%; max-width: 720px; }
+.game-hud { display: flex; align-items: center; gap: 1rem; margin-bottom: .6rem; }
+.game-score { font-size: 1.3rem; font-weight: 800; color: #1d6a86; min-width: 4rem; }
+.game-meter { flex: 1; height: 12px; background: #d7e6ee; border-radius: 10px; overflow: hidden; }
+.game-meter-fill { height: 100%; width: 0; background: #4fb06d; transition: width .1s linear; }
+.game-finish { background: #eef2fb; color: var(--brand-dark); padding: .45rem 1rem; border-radius: 10px; font-weight: 600; }
+.game-canvas { width: 100%; height: auto; border-radius: var(--radius); box-shadow: var(--shadow);
+  display: block; cursor: crosshair; touch-action: none; }
+
+/* parent content admin */
+.content-admin textarea.big-input { font: inherit; resize: vertical; }
+.admin-row { display: flex; gap: .6rem; align-items: center; margin: .3rem 0; }
+.admin-row .big-input { margin: 0; }
+.topics-box { display: flex; flex-wrap: wrap; gap: .5rem; margin: .4rem 0; }
+.topic-chip { display: inline-flex; align-items: center; gap: .4rem; background: #eef2fb; color: var(--brand-dark);
+  padding: .3rem .4rem .3rem .8rem; border-radius: 20px; font-weight: 600; }
+.chip-x { background: none; color: var(--muted); font-size: 1.2rem; line-height: 1; padding: 0 .3rem; }
+.chip-x:hover { color: #c0392b; }
+.queue-item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1rem; margin: .7rem 0; }
+.queue-topic { font-size: .85rem; margin-bottom: .3rem; }
+.queue-item .result-actions { justify-content: flex-start; margin-top: .6rem; }
+
 @media (max-width: 760px) {
   :root { font-size: 17px; }
   .type-target { font-size: 1.5rem; }
   .kb-key { min-width: 1.9rem; height: 2.2rem; font-size: .9rem; }
   .kb-key.kb-space { min-width: 10rem; }
+  .buddy-layout { grid-template-columns: 1fr; }
+  .buddy-stage { position: static; }
 }

@@ -2,6 +2,8 @@
 import { api } from './api.js';
 import { TypingSession } from './engine.js';
 import { KeyboardView } from './keyboard.js';
+import { buildAvatarSVG } from './avatar.js';
+import { playTurtleGame } from './game.js';
 
 const AVATARS = {
   cat: '🐱', dog: '🐶', owl: '🦉', fox: '🦊', panda: '🐼', unicorn: '🦄',
@@ -12,7 +14,7 @@ const AVATAR_NAMES = Object.keys(AVATARS);
 const avatarEmoji = (n) => AVATARS[n] || '🐱';
 
 const root = () => document.getElementById('app');
-const state = { family: false, profile: null };
+const state = { family: false, profile: null, appName: 'Turtle Type' };
 
 // ---- tiny DOM helper ------------------------------------------------------
 function el(tag, props = {}, ...kids) {
@@ -38,6 +40,7 @@ async function boot() {
     const s = await api.get('session');
     state.family = s.family;
     state.profile = s.profile;
+    state.appName = s.app_name || 'Turtle Type';
   } catch (e) { /* fall through to login */ }
   route();
 }
@@ -64,7 +67,7 @@ function showLogin() {
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
   mount(screen('center',
     el('div', { class: 'card' },
-      el('h1', {}, '⌨️ Typing'),
+      el('h1', {}, `⌨️ ${state.appName}`),
       el('p', { class: 'muted' }, 'Type the family password to open the app.'),
       input, err,
       el('button', { class: 'primary big', onclick: submit }, 'Open'),
@@ -154,10 +157,12 @@ function showPin(p) {
 async function showHome() {
   document.onkeydown = null;
   const p = state.profile;
-  let lessons = [], progress = null;
+  let lessons = [], progress = null, avatar = null, made = [];
   try {
     const r = await api.get('lessons'); lessons = r.lessons;
     progress = (await api.get('progress')).progress;
+    avatar = await api.get('avatar');
+    made = (await api.get('content/mine')).items;
   } catch (e) {}
 
   // First-time child with no attempts → placement.
@@ -194,13 +199,23 @@ async function showHome() {
     map.append(node);
   }
 
+  const buddyCard = avatar ? el('div', { class: 'buddy-card' },
+    el('div', { class: 'buddy-mini', html: buildAvatarSVG(avatar.render, { width: 120 }) }),
+    el('div', { class: 'buddy-info' },
+      el('div', { class: 'shells-badge' }, `🐚 ${avatar.shells} shells`),
+      el('div', { class: 'buddy-btns' },
+        el('button', { class: 'secondary', onclick: showBuddy }, '✨ Dress up'),
+        el('button', { class: 'secondary', onclick: showGame }, '🐢 Turtle game'))),
+  ) : null;
+
   const actions = el('div', { class: 'home-actions' },
+    made.length ? el('button', { class: 'secondary', onclick: showMadeForYou }, `📖 Made for you (${made.length})`) : null,
     el('button', { class: 'secondary', onclick: showProgress }, '📈 My progress'),
     p.role === 'parent' ? el('button', { class: 'secondary', onclick: showParent }, '👪 Grown-up area') : null,
     el('button', { class: 'link', onclick: () => showPlacementIntro(true) }, 'Retake placement'),
   );
 
-  mount(screen('home', header, keepGoing, actions, el('h2', {}, 'Lessons'), map));
+  mount(screen('home', header, keepGoing, buddyCard, actions, el('h2', {}, 'Lessons'), map));
 }
 
 function stageName(s) {
@@ -331,8 +346,10 @@ async function startLesson(id) {
         duration_ms: agg.activeMs, keystats: Object.values(agg.keystats),
       });
       if (r.current_lesson) state.profile.current_lesson = r.current_lesson;
+      if (r.shells != null) state.profile.shells = r.shells;
     } catch (e) {}
-    showResult(L, { accuracy, wpm, stars: r.stars, passed: r.passed });
+    showResult(L, { accuracy, wpm, stars: r.stars, passed: r.passed,
+                    shellsEarned: r.shells_earned || 0, shells: r.shells || 0 });
   };
 
   next();
@@ -408,7 +425,8 @@ function runTarget({ title, badge, prompt, text, onDone, showResult = true }) {
   kb.highlightNext(session.expectedChar());
 }
 
-function showResult(L, { accuracy, wpm, stars, passed }) {
+function showResult(L, { accuracy, wpm, stars, passed, shellsEarned = 0, shells = 0, onAgain = null }) {
+  const again = onAgain || (L && L.id ? () => startLesson(L.id) : showHome);
   const pct = Math.round(accuracy * 100);
   const starRow = el('div', { class: 'star-row' },
     ...[1, 2, 3].map((i) => el('span', { class: 'star' + (i <= stars ? ' on' : '') }, '★')));
@@ -423,9 +441,13 @@ function showResult(L, { accuracy, wpm, stars, passed }) {
       el('div', { class: 'result-stats' },
         el('div', {}, el('b', {}, `${pct}%`), el('span', { class: 'muted' }, 'accuracy')),
         el('div', {}, el('b', {}, wpm), el('span', { class: 'muted' }, 'words/min'))),
+      shellsEarned > 0 ? el('div', { class: 'shells-earned' },
+        `🐚 +${shellsEarned} shells!`, el('span', { class: 'muted' }, ` you have ${shells}`)) : null,
       el('p', { class: 'muted' }, note),
       el('div', { class: 'result-actions' },
-        el('button', { class: 'secondary', onclick: () => startLesson(L.id) }, 'Try again'),
+        el('button', { class: 'secondary', onclick: again }, 'Try again'),
+        el('button', { class: 'secondary', onclick: showGame }, '🐢 Turtle game'),
+        el('button', { class: 'secondary', onclick: showBuddy }, '✨ Dress up'),
         el('button', { class: 'primary', onclick: showHome }, passed ? 'Next →' : 'Back to lessons')),
     )));
 }
@@ -451,6 +473,157 @@ async function showProgress() {
 function stat(icon, value, label) {
   return el('div', { class: 'stat' }, el('div', { class: 'stat-icon' }, icon),
     el('div', { class: 'stat-value' }, String(value)), el('div', { class: 'stat-label muted' }, label));
+}
+
+// ---- dress-up / shop ------------------------------------------------------
+const SLOT_NAMES = { clip: 'Hair clips', top: 'Tops', skirt: 'Skirts', shoes: 'Shoes' };
+const swatchColor = (it) => (it.render && (it.render.fill || it.render.color)) || '#cccccc';
+
+async function showBuddy() {
+  document.onkeydown = null;
+  let shop;
+  try { shop = await api.get('shop'); } catch (e) { return showHome(); }
+  const byKey = {};
+  shop.items.forEach((it) => (byKey[it.key] = it));
+  let equipped = { ...shop.equipped };
+  let owned = new Set(shop.owned);
+  let shells = shop.shells;
+
+  const renderFor = (eq) => {
+    const r = {};
+    for (const [slot, key] of Object.entries(eq)) if (byKey[key]) r[slot] = byKey[key].render;
+    return r;
+  };
+  const avatarBox = el('div', { class: 'buddy-avatar' });
+  const shellsEl = el('div', { class: 'shells-badge big' });
+  const msg = el('div', { class: 'buddy-msg' });
+  const grid = el('div', { class: 'shop-grid' });
+  const draw = () => { avatarBox.innerHTML = buildAvatarSVG(renderFor(equipped), { width: 240 }); };
+  const setShells = () => { shellsEl.textContent = `🐚 ${shells} shells`; };
+  const flash = (t) => { msg.textContent = t; clearTimeout(flash._t); flash._t = setTimeout(() => (msg.textContent = ''), 2400); };
+
+  const rebuild = () => {
+    grid.innerHTML = '';
+    for (const slot of shop.slots) {
+      grid.append(el('div', { class: 'slot-label' }, SLOT_NAMES[slot] || slot));
+      const row = el('div', { class: 'slot-row' });
+      shop.items.filter((it) => it.slot === slot).forEach((it) => {
+        const isOwned = owned.has(it.key);
+        const isOn = equipped[slot] === it.key;
+        row.append(el('button', {
+          class: 'item-card' + (isOn ? ' on' : '') + (isOwned ? '' : ' locked'),
+          onclick: () => pick(it) },
+          el('span', { class: 'item-swatch', style: `background:${swatchColor(it)}` }),
+          el('span', { class: 'item-name' }, it.name),
+          el('span', { class: 'item-price' }, isOwned ? (isOn ? '✓ wearing' : 'owned') : `🐚 ${it.price}`)));
+      });
+      grid.append(row);
+    }
+  };
+  const pick = async (it) => {
+    if (owned.has(it.key)) {
+      try { equipped = (await api.post('avatar/equip', { slot: it.slot, item_key: it.key })).equipped; draw(); rebuild(); }
+      catch (e) { flash(e.message || 'Try again.'); }
+      return;
+    }
+    if (it.price > shells) { flash(`Not enough shells — ${it.price - shells} more to go!`); return; }
+    try {
+      const b = await api.post('shop/buy', { item_key: it.key });
+      shells = b.shells; owned = new Set(b.owned); setShells();
+      equipped = (await api.post('avatar/equip', { slot: it.slot, item_key: it.key })).equipped;
+      flash(`Yay! Now wearing the ${it.name.toLowerCase()}.`);
+      draw(); rebuild();
+    } catch (e) { flash(e.message || 'Try again.'); }
+  };
+
+  draw(); setShells(); rebuild();
+  mount(screen('buddy',
+    el('div', { class: 'lesson-top' },
+      el('button', { class: 'link', onclick: showHome }, '← home'),
+      el('div', { class: 'spacer' }), shellsEl),
+    el('h1', {}, 'Your buddy'),
+    el('p', { class: 'muted' }, 'Tap clothes to try them on. Buy new ones with shells you earn from lessons.'),
+    el('div', { class: 'buddy-layout' },
+      el('div', { class: 'buddy-stage' }, avatarBox, msg),
+      grid),
+  ));
+}
+
+// ---- turtle mini-game -----------------------------------------------------
+function showGame() {
+  document.onkeydown = null;
+  const container = el('div', { class: 'game-screen' });
+  mount(screen('game',
+    el('div', { class: 'lesson-top' },
+      el('button', { class: 'link', onclick: showHome }, '← home'), el('div', { class: 'spacer' })),
+    el('h2', {}, '🐢 Turtle Reef'),
+    el('p', { class: 'muted' }, 'Swim with your mouse or the arrow keys and scoop up shells!'),
+    container));
+  playTurtleGame(container, async (collected) => {
+    let bonus = 0, shells = state.profile.shells || 0;
+    try {
+      const r = await api.post('game/reward', { collected });
+      bonus = r.bonus; shells = r.shells; state.profile.shells = shells;
+    } catch (e) {}
+    showGameResult(collected, bonus, shells);
+  });
+}
+
+function showGameResult(collected, bonus, shells) {
+  mount(screen('center',
+    el('div', { class: 'card result' },
+      el('div', { class: 'star-row' }, '🐢'),
+      el('h1', {}, 'Great swim!'),
+      el('p', { class: 'muted' }, `You found ${collected} shell${collected === 1 ? '' : 's'} in the reef.`),
+      bonus > 0 ? el('div', { class: 'shells-earned' }, `🐚 +${bonus} bonus shells!`,
+        el('span', { class: 'muted' }, ` you have ${shells}`)) : null,
+      el('div', { class: 'result-actions' },
+        el('button', { class: 'secondary', onclick: showGame }, 'Play again'),
+        el('button', { class: 'secondary', onclick: showBuddy }, '✨ Dress up'),
+        el('button', { class: 'primary', onclick: showHome }, 'Home')),
+    )));
+}
+
+// ---- made-for-you passages (child) ----------------------------------------
+async function showMadeForYou() {
+  document.onkeydown = null;
+  let items = [];
+  try { items = (await api.get('content/mine')).items; } catch (e) {}
+  const list = items.length
+    ? el('div', { class: 'lesson-map' }, ...items.map((it) =>
+        el('button', { class: 'lesson-chip available', onclick: () => startContent(it) },
+          el('span', { class: 'chip-no' }, '📖'),
+          el('span', { class: 'chip-title' }, it.topic && it.topic !== '(your own)' ? it.topic : 'A special passage'),
+          el('span', { class: 'chip-stars' }, '→'))))
+    : el('p', { class: 'muted' }, 'Nothing yet — ask a grown-up to make you some!');
+  mount(screen('home',
+    el('div', { class: 'lesson-top' }, el('button', { class: 'link', onclick: showHome }, '← home'), el('div', { class: 'spacer' })),
+    el('h1', {}, '📖 Made for you'),
+    el('p', { class: 'muted' }, 'Special typing picked just for you.'),
+    list));
+}
+
+function startContent(item) {
+  const run = () => runTarget({
+    title: 'Made for you',
+    badge: item.topic && item.topic !== '(your own)' ? item.topic : 'special',
+    prompt: 'Type your special passage:',
+    text: item.text,
+    onDone: async (res) => {
+      const total = res.correct + res.wrong;
+      const accuracy = total ? res.correct / total : 1;
+      const wpm = Math.min(250, Math.round((item.text.length / 5) / Math.max(res.duration_ms / 60000, 1 / 60000)));
+      let r = { stars: 0, passed: false, shells_earned: 0, shells: state.profile.shells };
+      try {
+        r = await api.post('attempt', { content_item_id: item.id, source: 'content', accuracy, wpm,
+          duration_ms: res.duration_ms, keystats: res.keystats });
+        if (r.shells != null) state.profile.shells = r.shells;
+      } catch (e) {}
+      showResult(null, { accuracy, wpm, stars: r.stars, passed: r.passed,
+        shellsEarned: r.shells_earned || 0, shells: r.shells || 0, onAgain: run });
+    },
+  });
+  run();
 }
 
 // ---- parent area ----------------------------------------------------------
@@ -484,6 +657,7 @@ async function showParent() {
     el('div', { class: 'lesson-top' },
       el('button', { class: 'link', onclick: showHome }, '← home'), el('div', { class: 'spacer' })),
     el('h1', {}, 'Grown-up area'),
+    el('button', { class: 'secondary', onclick: showContentAdmin }, '✍️ Made-for-you content'),
     el('h2', {}, 'Progress'), table,
     el('h2', {}, 'Profiles'), list,
     el('button', { class: 'primary', onclick: () => editProfile(null) }, '+ Add profile'),
@@ -534,6 +708,88 @@ function editProfile(p) {
         el('button', { class: 'secondary', onclick: showParent }, 'Cancel'),
         el('button', { class: 'primary', onclick: save }, 'Save')),
     )));
+}
+
+// ---- parent: made-for-you content admin -----------------------------------
+async function showContentAdmin() {
+  let profiles = [];
+  try { profiles = (await api.get('profiles')).profiles; } catch (e) {}
+  const children = profiles.filter((p) => p.role === 'child');
+  const container = el('div', { class: 'content-admin' });
+  mount(screen('parent',
+    el('div', { class: 'lesson-top' }, el('button', { class: 'link', onclick: showParent }, '← grown-up area'), el('div', { class: 'spacer' })),
+    el('h1', {}, '✍️ Made-for-you content'),
+    container));
+  if (!children.length) { container.append(el('p', { class: 'muted' }, 'Add a child profile first.')); return; }
+
+  let current = children[0];
+  const childSel = el('select', { class: 'big-input' }, ...children.map((c) => el('option', { value: c.id }, c.name)));
+  childSel.onchange = () => { current = children.find((c) => String(c.id) === childSel.value) || children[0]; refresh(); };
+
+  const topicsBox = el('div', { class: 'topics-box' });
+  const newTopic = el('input', { class: 'big-input', placeholder: 'Add a topic (e.g. sea turtles)' });
+  const genTopic = el('input', { class: 'big-input', placeholder: 'Topic to generate about' });
+  const genMsg = el('p', { class: 'muted' });
+  const ownText = el('textarea', { class: 'big-input', rows: '3', placeholder: 'Type your own passage (spelling words, a sweet note…)' });
+  const ownMsg = el('p', { class: 'muted' });
+  const queueBox = el('div', { class: 'queue-box' });
+
+  const renderTopics = (topics) => {
+    topicsBox.innerHTML = '';
+    topics.forEach((t) => topicsBox.append(el('span', { class: 'topic-chip' }, t.topic,
+      el('button', { class: 'chip-x', onclick: async () => { await api.post('topics/delete', { id: t.id }); refresh(); } }, '×'))));
+    if (!topics.length) topicsBox.append(el('span', { class: 'muted' }, 'No topics yet.'));
+  };
+  const renderQueue = (items) => {
+    queueBox.innerHTML = '';
+    if (!items.length) { queueBox.append(el('p', { class: 'muted' }, 'Nothing waiting for review.')); return; }
+    items.forEach((it) => {
+      const ta = el('textarea', { class: 'big-input', rows: '3' }); ta.value = it.text;
+      queueBox.append(el('div', { class: 'queue-item' },
+        el('div', { class: 'queue-topic muted' }, it.topic),
+        ta,
+        el('div', { class: 'result-actions' },
+          el('button', { class: 'primary', onclick: async () => { await api.post('content/review', { id: it.id, action: 'approve', text: ta.value }); refresh(); } }, '✓ Approve'),
+          el('button', { class: 'secondary', onclick: async () => { await api.post('content/review', { id: it.id, action: 'reject' }); refresh(); } }, 'Reject'))));
+    });
+  };
+  async function refresh() {
+    try { renderTopics((await api.get('topics', { profile_id: current.id })).topics); } catch (e) {}
+    try { renderQueue((await api.get('content/queue', { profile_id: current.id })).items); } catch (e) {}
+  }
+  async function generate() {
+    genMsg.textContent = 'Working…';
+    try {
+      const r = await api.post('content/generate', { profile_id: current.id, topic: genTopic.value.trim() || 'fun facts', count: 3 });
+      genMsg.textContent = `Added ${r.generated} passage(s) to the queue` + (r.rejected ? `, skipped ${r.rejected} that used not-yet-learned keys.` : '.');
+      refresh();
+    } catch (e) { genMsg.textContent = e.message || 'Could not generate.'; }
+  }
+  async function addOwn() {
+    if (!ownText.value.trim()) return;
+    try {
+      const r = await api.post('content/add', { profile_id: current.id, text: ownText.value.trim() });
+      ownMsg.textContent = (r.warnings && r.warnings.length)
+        ? `Added — heads up, these aren't learned yet: ${r.warnings.join(' ')}`
+        : 'Added to the queue.';
+      ownText.value = ''; refresh();
+    } catch (e) { ownMsg.textContent = e.message || 'Could not add.'; }
+  }
+
+  container.append(
+    el('label', {}, 'Child'), childSel,
+    el('h2', {}, 'Topics'), topicsBox,
+    el('div', { class: 'admin-row' }, newTopic,
+      el('button', { class: 'secondary', onclick: async () => { if (newTopic.value.trim()) { await api.post('topics/add', { profile_id: current.id, topic: newTopic.value.trim() }); newTopic.value = ''; refresh(); } } }, 'Add')),
+    el('h2', {}, 'Generate passages'),
+    el('p', { class: 'muted' }, 'The AI writes a few passages using only the keys this child has learned. Nothing reaches the child until you approve it below.'),
+    el('div', { class: 'admin-row' }, genTopic, el('button', { class: 'primary', onclick: generate }, 'Generate')),
+    genMsg,
+    el('h2', {}, 'Add your own'),
+    ownText, el('div', {}, el('button', { class: 'secondary', onclick: addOwn }, 'Add to queue')), ownMsg,
+    el('h2', {}, 'Approval queue'), queueBox,
+  );
+  refresh();
 }
 
 boot();

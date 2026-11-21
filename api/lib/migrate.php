@@ -30,6 +30,7 @@ function migrate(): void {
         pin_hash $txt NOT NULL,
         current_lesson $int NOT NULL DEFAULT 1,
         reading_level $int NOT NULL DEFAULT 4,
+        shells $int NOT NULL DEFAULT 0,
         settings $txt,
         failed_attempts $int NOT NULL DEFAULT 0,
         locked_until $dt NULL,
@@ -101,8 +102,31 @@ function migrate(): void {
         created_at $dt NOT NULL
     )$eng";
 
+    // ---- Phase 2: dress-up ownership ----
+    $stmts[] = "CREATE TABLE IF NOT EXISTS owned_cosmetics (
+        id $pk,
+        profile_id $int NOT NULL,
+        item_key {$vc(40)} NOT NULL,
+        created_at $dt NOT NULL
+    )$eng";
+    $stmts[] = "CREATE UNIQUE INDEX IF NOT EXISTS idx_owned ON owned_cosmetics (profile_id, item_key)";
+
     $pdo = DB::pdo();
     foreach ($stmts as $s) {
         $pdo->exec($s);
     }
+
+    // Upgrade path: add columns to tables that already exist from Phase 1.
+    // ALTER throws if the column is already there, so each is best-effort.
+    foreach (["ALTER TABLE profiles ADD COLUMN shells $int NOT NULL DEFAULT 0"] as $alter) {
+        try { $pdo->exec($alter); } catch (Throwable $e) { /* column already exists */ }
+    }
+
+    // Record schema version so the app can auto-upgrade itself after a deploy.
+    try {
+        $pdo->exec("DELETE FROM settings WHERE skey = 'schema_version'");
+        $pdo->exec("INSERT INTO settings (skey, svalue) VALUES ('schema_version', '" . SCHEMA_VERSION . "')");
+    } catch (Throwable $e) { /* best effort */ }
 }
+
+const SCHEMA_VERSION = 2;

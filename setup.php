@@ -44,6 +44,7 @@ function run_setup(array $in, string $configPath): array {
         'db_pass'   => $in['db_pass'],
         'db_path'   => __DIR__ . '/db/local.sqlite',
         'family_password_hash' => password_hash($in['family_password'], PASSWORD_DEFAULT),
+        'anthropic_api_key' => '',
         'ai_month_cap' => 200,
         'pin_max_attempts' => 5,
         'pin_lockout_minutes' => 15,

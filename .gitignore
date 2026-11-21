@@ -1,5 +1,6 @@
-# Planning doc — contains family names; keep out of the public repo.
+# Planning / personal docs — contain family names; keep out of the public repo.
 PLAN.md
+PHASE2-INTERVIEW.md
 
 # Secrets + local data — never commit these.
 api/config.php

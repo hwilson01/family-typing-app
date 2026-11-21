@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "currency": { "name": "shells", "icon": "shell" },
+  "slots": ["clip", "top", "skirt", "shoes"],
+  "default_equip": {
+    "clip": "clip_turtle",
+    "top": "top_ellie",
+    "skirt": "skirt_cream",
+    "shoes": "shoes_white"
+  },
+  "items": [
+    { "key": "clip_turtle", "slot": "clip", "name": "Baby turtle clip", "price": 0,
+      "render": { "shape": "turtle", "color": "#4a9d6e" } },
+    { "key": "clip_bow", "slot": "clip", "name": "Pink bow", "price": 5,
+      "render": { "shape": "bow", "color": "#ff8aa6" } },
+    { "key": "clip_star", "slot": "clip", "name": "Gold star", "price": 6,
+      "render": { "shape": "star", "color": "#ffcf4d" } },
+    { "key": "clip_shell", "slot": "clip", "name": "Sea shell", "price": 7,
+      "render": { "shape": "shell", "color": "#ff9ec2" } },
+
+    { "key": "top_ellie", "slot": "top", "name": "Ellie is #1 tee", "price": 0,
+      "render": { "style": "tee", "fill": "#ffffff", "accent": "#f4e59a", "label": true } },
+    { "key": "top_striped", "slot": "top", "name": "Teal stripes", "price": 8,
+      "render": { "style": "striped", "fill": "#eafbff", "accent": "#3fb3c9", "label": false } },
+    { "key": "top_coral", "slot": "top", "name": "Coral hoodie", "price": 12,
+      "render": { "style": "hoodie", "fill": "#ff8f7a", "accent": "#e4654f", "label": false } },
+
+    { "key": "skirt_cream", "slot": "skirt", "name": "Cream skirt", "price": 0,
+      "render": { "fill": "#f2e8cf", "line": "#d9c79a", "style": "plain" } },
+    { "key": "skirt_teal", "slot": "skirt", "name": "Teal skirt", "price": 8,
+      "render": { "fill": "#4fb3c9", "line": "#2f8ea2", "style": "plain" } },
+    { "key": "skirt_rainbow", "slot": "skirt", "name": "Rainbow skirt", "price": 14,
+      "render": { "fill": "#ffd36b", "line": "#e6a93b", "style": "rainbow" } },
+
+    { "key": "shoes_white", "slot": "shoes", "name": "White sneakers", "price": 0,
+      "render": { "fill": "#ffffff", "sole": "#ff6f91" } },
+    { "key": "shoes_pink", "slot": "shoes", "name": "Pink sneakers", "price": 6,
+      "render": { "fill": "#ffd1dc", "sole": "#ff6f91" } },
+    { "key": "shoes_aqua", "slot": "shoes", "name": "Aqua sneakers", "price": 10,
+      "render": { "fill": "#bdeef2", "sole": "#3fb3c9" } }
+  ]
+}

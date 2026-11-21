@@ -96,6 +96,7 @@ class Auth {
             'role' => $p['role'],
             'current_lesson' => (int) $p['current_lesson'],
             'reading_level' => (int) $p['reading_level'],
+            'shells' => (int) ($p['shells'] ?? 0),
         ];
     }
 }

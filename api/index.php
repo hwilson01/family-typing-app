@@ -18,6 +18,18 @@ try {
 } catch (Throwable $e) {
     fail('db_error', 'Could not connect to the database.', 500);
 }
+
+// Auto-apply pending DB migrations once after a deploy (idempotent + guarded).
+require_once __DIR__ . '/lib/migrate.php';
+try {
+    $sv = DB::one("SELECT svalue FROM settings WHERE skey = 'schema_version'");
+    if ((int)($sv['svalue'] ?? 0) < SCHEMA_VERSION) {
+        migrate();
+        require_once __DIR__ . '/lib/seed.php';
+        seed_curriculum();
+    }
+} catch (Throwable $e) { /* fresh installs are handled by setup.php */ }
+
 start_app_session();
 
 $r = $_GET['r'] ?? '';
@@ -75,12 +87,115 @@ function upsert_keystats(int $pid, array $keystats): void {
     }
 }
 
+// ---- Cosmetics / dress-up helpers -----------------------------------------
+function load_cosmetics(): array {
+    static $c = null;
+    if ($c !== null) return $c;
+    $path = __DIR__ . '/../data/cosmetics.json';
+    $c = is_file($path) ? (json_decode(file_get_contents($path), true) ?: []) : [];
+    return $c;
+}
+function cosmetic(string $key): ?array {
+    foreach (load_cosmetics()['items'] ?? [] as $it) if ($it['key'] === $key) return $it;
+    return null;
+}
+function profile_settings(array $p): array {
+    $s = json_decode($p['settings'] ?? '', true);
+    return is_array($s) ? $s : [];
+}
+function effective_equipped(array $p): array {
+    $eq = load_cosmetics()['default_equip'] ?? [];
+    $s = profile_settings($p);
+    if (!empty($s['equipped']) && is_array($s['equipped'])) {
+        foreach ($s['equipped'] as $slot => $key) $eq[$slot] = $key;
+    }
+    return $eq;
+}
+function owned_keys(int $pid): array {
+    $owned = [];
+    foreach (load_cosmetics()['items'] ?? [] as $it) {
+        if ((int)($it['price'] ?? 0) === 0) $owned[$it['key']] = true; // free items owned by all
+    }
+    foreach (DB::all('SELECT item_key FROM owned_cosmetics WHERE profile_id = ?', [$pid]) as $row) {
+        $owned[$row['item_key']] = true;
+    }
+    return array_keys($owned);
+}
+function app_name(): string {
+    $row = DB::one('SELECT svalue FROM settings WHERE skey = ?', ['app_name']);
+    return ($row && $row['svalue'] !== '') ? $row['svalue'] : 'Turtle Type';
+}
+
+// ---- AI content helpers ---------------------------------------------------
+// Characters a learner can type by a given lesson (letters, unlocked punctuation
+// and digits, plus capitals once a shift lesson is unlocked, plus space). This
+// is the same constraint the curriculum generator enforces, reused for AI text.
+function allowed_chars_for(int $order): array {
+    $rows = DB::all('SELECT new_keys FROM lessons WHERE lesson_order <= ?', [$order]);
+    $chars = [' ' => true];
+    $allowUpper = false;
+    foreach ($rows as $r) {
+        foreach (json_decode($r['new_keys'] ?? '[]', true) ?: [] as $k) {
+            if ($k === 'LShift' || $k === 'RShift') { $allowUpper = true; continue; }
+            $chars[$k] = true;
+        }
+    }
+    if ($allowUpper) {
+        foreach (array_keys($chars) as $c) if ($c >= 'a' && $c <= 'z') $chars[strtoupper($c)] = true;
+    }
+    return array_keys($chars);
+}
+function validate_passage(string $text, array $allowed, int $maxLen = 220): array {
+    $set = array_flip($allowed);
+    $bad = [];
+    foreach (preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY) as $ch) {
+        if (!isset($set[$ch])) $bad[$ch] = true;
+    }
+    return ['ok' => empty($bad) && trim($text) !== '' && mb_strlen($text) <= $maxLen,
+            'bad' => array_keys($bad), 'len' => mb_strlen($text)];
+}
+// Server-side Anthropic call. Sends only topic, reading level and the allowed
+// character set — never names, ages, school or any child identifier.
+function anthropic_generate(array $cfg, string $topic, int $level, array $allowed, int $count): array {
+    $key = $cfg['anthropic_api_key'] ?? '';
+    if ($key === '') return ['error' => 'no_key'];
+    $allowedStr = implode('', $allowed);
+    $sys = "You write ultra-short typing-practice lines for a child learning touch typing. "
+        . "Target reading level: grade $level. "
+        . "HARD CONSTRAINT: use ONLY these characters, nothing else (spaces allowed): \"$allowedStr\". "
+        . "If a word would need a letter or mark outside that set, choose a different word. "
+        . "Each line is 1-2 short sentences, 60-180 characters, cheerful and age-appropriate. "
+        . "Topic: $topic. Never include real people's names, ages, schools, addresses or places. "
+        . "Reply with ONLY a JSON array of $count strings and nothing else.";
+    $payload = json_encode([
+        'model' => 'claude-haiku-5-5', 'max_tokens' => 900, 'system' => $sys,
+        'messages' => [['role' => 'user', 'content' => "Write $count practice lines about: $topic"]],
+    ]);
+    $ch = curl_init('https://api.anthropic.com/v1/messages');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_TIMEOUT => 40,
+        CURLOPT_HTTPHEADER => ['content-type: application/json', 'x-api-key: ' . $key, 'anthropic-version: 2023-06-01'],
+        CURLOPT_POSTFIELDS => $payload,
+    ]);
+    $res = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($res === false || $code >= 400) return ['error' => 'api_error'];
+    $text = json_decode($res, true)['content'][0]['text'] ?? '';
+    if (preg_match('/\[.*\]/s', $text, $m)) {
+        $arr = json_decode($m[0], true);
+        if (is_array($arr)) return ['passages' => array_values(array_filter(array_map('strval', $arr)))];
+    }
+    return ['error' => 'parse_error'];
+}
+
 // ---- Routes ---------------------------------------------------------------
 switch ($r) {
 
 case 'session':
     $p = Auth::currentProfile();
     ok([
+        'app_name' => app_name(),
         'family' => Auth::familyOk(),
         'profile' => $p ? Auth::publicProfile($p) : null,
     ]);
@@ -246,6 +361,7 @@ case 'lesson': // GET &id= -> steps + tricky-keys drill  (must be unlocked)
 case 'attempt': // POST {lesson_id?, source, duration_ms, accuracy, wpm, keystats[]}
     $p = Auth::requireProfile();
     $lessonId = field('lesson_id') !== null ? (int) field('lesson_id') : null;
+    $contentId = field('content_item_id') !== null ? (int) field('content_item_id') : null;
     $source = (string) field('source', 'lesson');
     $acc = max(0.0, min(1.0, (float) field('accuracy', 0)));
     $wpm = max(0, min(250, (int) field('wpm', 0)));
@@ -261,13 +377,25 @@ case 'attempt': // POST {lesson_id?, source, duration_ms, accuracy, wpm, keystat
     }
     $stars = star_rating($acc, $threshold);
 
-    DB::run('INSERT INTO attempts (profile_id, lesson_id, source, duration_ms, wpm, accuracy, stars, created_at)
-             VALUES (?,?,?,?,?,?,?,?)',
-        [$p['id'], $lessonId, $source, $dur, $wpm, $acc, $stars, DB::now()]);
+    // Was this lesson already passed before this attempt? (first pass pays more)
+    $priorPass = 0;
+    if ($lessonId) {
+        $row = DB::one('SELECT COUNT(*) AS c FROM attempts WHERE profile_id = ? AND lesson_id = ? AND accuracy >= ?',
+            [$p['id'], $lessonId, $threshold]);
+        $priorPass = (int) ($row['c'] ?? 0);
+    } elseif ($contentId) {
+        $row = DB::one('SELECT COUNT(*) AS c FROM attempts WHERE profile_id = ? AND content_item_id = ? AND accuracy >= ?',
+            [$p['id'], $contentId, $threshold]);
+        $priorPass = (int) ($row['c'] ?? 0);
+    }
+
+    DB::run('INSERT INTO attempts (profile_id, lesson_id, content_item_id, source, duration_ms, wpm, accuracy, stars, created_at)
+             VALUES (?,?,?,?,?,?,?,?,?)',
+        [$p['id'], $lessonId, $contentId, $source, $dur, $wpm, $acc, $stars, DB::now()]);
     if (is_array($keystats)) upsert_keystats((int)$p['id'], $keystats);
 
     // Advance the pointer only when the CURRENT lesson is passed.
-    $passed = $lessonId && $acc >= $threshold;
+    $passed = ($lessonId || $contentId) && $acc >= $threshold;
     $newCurrent = (int) $p['current_lesson'];
     if ($passed && $lessonOrder === (int) $p['current_lesson']) {
         $next = min($lessonOrder + 1, max_order());
@@ -276,7 +404,23 @@ case 'attempt': // POST {lesson_id?, source, duration_ms, accuracy, wpm, keystat
             $newCurrent = $next;
         }
     }
-    ok(['stars' => $stars, 'passed' => (bool)$passed, 'current_lesson' => $newCurrent]);
+    // Award shells (kid-friendly: always a little, more for a first pass).
+    // Lessons and "made for you" passages both earn; the mini-game uses its own route.
+    $shellsEarned = 0;
+    if ($lessonId || $contentId) {
+        if ($passed && $priorPass === 0)      $shellsEarned = [1 => 6, 2 => 10, 3 => 15][$stars] ?? 6;
+        elseif ($passed)                      $shellsEarned = 3;  // replay practice
+        else                                  $shellsEarned = 1;  // effort, never zero
+        if ($shellsEarned > 0) {
+            DB::run('UPDATE profiles SET shells = shells + ? WHERE id = ?', [$shellsEarned, $p['id']]);
+            DB::run('INSERT INTO rewards (profile_id, type, value, meta, created_at) VALUES (?,?,?,?,?)',
+                [$p['id'], 'earn', $shellsEarned,
+                 json_encode(['lesson_id' => $lessonId, 'content_item_id' => $contentId, 'stars' => $stars]), DB::now()]);
+        }
+    }
+    $bal = DB::one('SELECT shells FROM profiles WHERE id = ?', [$p['id']]);
+    ok(['stars' => $stars, 'passed' => (bool)$passed, 'current_lesson' => $newCurrent,
+        'shells_earned' => $shellsEarned, 'shells' => (int)($bal['shells'] ?? 0)]);
     break;
 
 case 'placement': // GET -> probe config
@@ -342,6 +486,187 @@ case 'keyboard': // GET -> finger map + colors for the on-screen keyboard
     Auth::requireFamily();
     $row = DB::one('SELECT svalue FROM settings WHERE skey = ?', ['keyboard_meta']);
     ok(['keyboard' => $row ? json_decode($row['svalue'], true) : null]);
+    break;
+
+case 'avatar': // GET -> what the buddy is wearing + render data + balance
+    $p = Auth::requireProfile();
+    $eq = effective_equipped($p);
+    $render = [];
+    foreach ($eq as $slot => $key) {
+        $it = cosmetic((string)$key);
+        if ($it) $render[$slot] = $it['render'] ?? [];
+    }
+    ok(['equipped' => $eq, 'render' => $render, 'shells' => (int)$p['shells']]);
+    break;
+
+case 'shop': // GET -> catalog + owned + equipped + balance
+    $p = Auth::requireProfile();
+    $cos = load_cosmetics();
+    ok([
+        'shells' => (int)$p['shells'],
+        'currency' => $cos['currency'] ?? ['name' => 'shells'],
+        'slots' => $cos['slots'] ?? [],
+        'items' => $cos['items'] ?? [],
+        'owned' => owned_keys((int)$p['id']),
+        'equipped' => effective_equipped($p),
+    ]);
+    break;
+
+case 'shop/buy': // POST {item_key}
+    $p = Auth::requireProfile();
+    $key = (string) field('item_key', '');
+    $it = cosmetic($key);
+    if (!$it) fail('not_found', 'No such item.', 404);
+    if (in_array($key, owned_keys((int)$p['id']), true)) fail('owned', 'You already have that one.');
+    $price = (int)($it['price'] ?? 0);
+    if ($price > (int)$p['shells']) fail('too_few_shells', 'Not enough shells yet — keep practicing!');
+    DB::run('UPDATE profiles SET shells = shells - ? WHERE id = ?', [$price, $p['id']]);
+    DB::run('INSERT INTO owned_cosmetics (profile_id, item_key, created_at) VALUES (?,?,?)',
+        [$p['id'], $key, DB::now()]);
+    DB::run('INSERT INTO rewards (profile_id, type, value, meta, created_at) VALUES (?,?,?,?,?)',
+        [$p['id'], 'spend', $price, json_encode(['item' => $key]), DB::now()]);
+    $p = DB::one('SELECT * FROM profiles WHERE id = ?', [$p['id']]);
+    ok(['shells' => (int)$p['shells'], 'owned' => owned_keys((int)$p['id'])]);
+    break;
+
+case 'avatar/equip': // POST {slot, item_key}
+    $p = Auth::requireProfile();
+    $slot = (string) field('slot', '');
+    $key = (string) field('item_key', '');
+    $it = cosmetic($key);
+    if (!$it || ($it['slot'] ?? '') !== $slot) fail('bad_input', 'That does not go there.');
+    if (!in_array($key, owned_keys((int)$p['id']), true)) fail('not_owned', 'Buy it first.', 403);
+    $s = profile_settings($p);
+    $s['equipped'] = $s['equipped'] ?? [];
+    $s['equipped'][$slot] = $key;
+    DB::run('UPDATE profiles SET settings = ? WHERE id = ?', [json_encode($s), $p['id']]);
+    $p = DB::one('SELECT * FROM profiles WHERE id = ?', [$p['id']]);
+    ok(['equipped' => effective_equipped($p)]);
+    break;
+
+case 'game/reward': // POST {collected} -> capped bonus shells from the mini-game
+    $p = Auth::requireProfile();
+    $collected = max(0, min(60, (int) field('collected', 0)));
+    $bonus = min($collected, 12); // capped so the game never out-earns real lessons
+    if ($bonus > 0) {
+        DB::run('UPDATE profiles SET shells = shells + ? WHERE id = ?', [$bonus, $p['id']]);
+        DB::run('INSERT INTO rewards (profile_id, type, value, meta, created_at) VALUES (?,?,?,?,?)',
+            [$p['id'], 'game', $bonus, json_encode(['collected' => $collected]), DB::now()]);
+    }
+    $bal = DB::one('SELECT shells FROM profiles WHERE id = ?', [$p['id']]);
+    ok(['bonus' => $bonus, 'collected' => $collected, 'shells' => (int)($bal['shells'] ?? 0)]);
+    break;
+
+case 'settings/app_name': // POST {name}  (parent) -> rename the app
+    Auth::requireParent();
+    $name = trim((string) field('name', ''));
+    if ($name === '' || mb_strlen($name) > 40) fail('bad_input', 'Pick a name up to 40 letters.');
+    DB::run('DELETE FROM settings WHERE skey = ?', ['app_name']);
+    DB::run('INSERT INTO settings (skey, svalue) VALUES (?, ?)', ['app_name', $name]);
+    ok(['app_name' => $name]);
+    break;
+
+case 'topics': // GET &profile_id= (parent) -> a child's interest topics
+    Auth::requireParent();
+    $pid = (int)($_GET['profile_id'] ?? 0);
+    ok(['topics' => DB::all('SELECT id, topic FROM topics WHERE profile_id = ? ORDER BY created_at', [$pid])]);
+    break;
+
+case 'topics/add': // POST {profile_id, topic} (parent)
+    Auth::requireParent();
+    $pid = (int) field('profile_id', 0);
+    $t = trim((string) field('topic', ''));
+    if ($pid <= 0 || $t === '') fail('bad_input', 'Pick a child and a topic.');
+    $id = DB::insert('INSERT INTO topics (profile_id, topic, created_at) VALUES (?,?,?)', [$pid, $t, DB::now()]);
+    ok(['id' => $id]);
+    break;
+
+case 'topics/delete': // POST {id} (parent)
+    Auth::requireParent();
+    DB::run('DELETE FROM topics WHERE id = ?', [(int) field('id', 0)]);
+    ok();
+    break;
+
+case 'content/generate': // POST {profile_id, topic, count?} (parent)
+    Auth::requireParent();
+    $pid = (int) field('profile_id', 0);
+    $topic = trim((string) field('topic', ''));
+    $count = max(1, min(5, (int) field('count', 3)));
+    $child = DB::one('SELECT * FROM profiles WHERE id = ?', [$pid]);
+    if (!$child || $topic === '') fail('bad_input', 'Pick a child and a topic.');
+    $mk = 'ai_gen_' . gmdate('Ym');
+    $capRow = DB::one('SELECT svalue FROM settings WHERE skey = ?', [$mk]);
+    $used = (int)($capRow['svalue'] ?? 0);
+    $cap = (int)($cfg['ai_month_cap'] ?? 200);
+    if ($used >= $cap) fail('cap_reached', "This month's passage limit is reached.");
+    $allowed = allowed_chars_for((int)$child['current_lesson']);
+    $gen = anthropic_generate($cfg, $topic, (int)$child['reading_level'], $allowed, $count);
+    if (isset($gen['error'])) {
+        $msg = $gen['error'] === 'no_key'
+            ? 'No AI key is set up yet. Add anthropic_api_key to the server config to turn this on.'
+            : 'The AI is unavailable right now — try again later.';
+        fail($gen['error'], $msg, 503);
+    }
+    $inserted = 0; $rejected = 0;
+    foreach ($gen['passages'] as $txt) {
+        if (validate_passage($txt, $allowed)['ok']) {
+            DB::run('INSERT INTO content_items (profile_id, topic, reading_level, text, allowed_keys, status, created_at)
+                     VALUES (?,?,?,?,?,?,?)',
+                [$pid, $topic, (int)$child['reading_level'], $txt, json_encode($allowed), 'pending', DB::now()]);
+            $inserted++;
+        } else { $rejected++; }
+    }
+    DB::run('DELETE FROM settings WHERE skey = ?', [$mk]);
+    DB::run('INSERT INTO settings (skey, svalue) VALUES (?, ?)', [$mk, (string)($used + $inserted)]);
+    ok(['generated' => $inserted, 'rejected' => $rejected]);
+    break;
+
+case 'content/add': // POST {profile_id, text} (parent) -> own passage into the queue
+    Auth::requireParent();
+    $pid = (int) field('profile_id', 0);
+    $text = trim((string) field('text', ''));
+    $child = DB::one('SELECT * FROM profiles WHERE id = ?', [$pid]);
+    if (!$child || $text === '') fail('bad_input', 'Pick a child and write a passage.');
+    $allowed = allowed_chars_for((int)$child['current_lesson']);
+    $v = validate_passage($text, $allowed, 400);
+    $id = DB::insert('INSERT INTO content_items (profile_id, topic, reading_level, text, allowed_keys, status, created_at)
+                      VALUES (?,?,?,?,?,?,?)',
+        [$pid, '(your own)', (int)$child['reading_level'], $text, json_encode($allowed), 'pending', DB::now()]);
+    ok(['id' => $id, 'warnings' => $v['ok'] ? [] : $v['bad']]);
+    break;
+
+case 'content/queue': // GET &profile_id? (parent) -> pending passages
+    Auth::requireParent();
+    $pid = (int)($_GET['profile_id'] ?? 0);
+    $rows = $pid
+        ? DB::all('SELECT * FROM content_items WHERE status = ? AND profile_id = ? ORDER BY created_at DESC', ['pending', $pid])
+        : DB::all('SELECT * FROM content_items WHERE status = ? ORDER BY created_at DESC', ['pending']);
+    ok(['items' => $rows]);
+    break;
+
+case 'content/review': // POST {id, action: approve|reject, text?} (parent)
+    Auth::requireParent();
+    $id = (int) field('id', 0);
+    $action = (string) field('action', '');
+    $it = DB::one('SELECT * FROM content_items WHERE id = ?', [$id]);
+    if (!$it) fail('not_found', 'No such passage.', 404);
+    if ($action === 'approve') {
+        $text = field('text') !== null ? trim((string) field('text')) : $it['text'];
+        if ($text === '') fail('bad_input', 'Passage is empty.');
+        DB::run('UPDATE content_items SET status = ?, text = ?, reviewed_at = ? WHERE id = ?',
+            ['approved', $text, DB::now(), $id]);
+    } elseif ($action === 'reject') {
+        DB::run('UPDATE content_items SET status = ?, reviewed_at = ? WHERE id = ?', ['rejected', DB::now(), $id]);
+    } else {
+        fail('bad_input', 'Unknown action.');
+    }
+    ok();
+    break;
+
+case 'content/mine': // GET -> approved passages for the active profile ("made for you")
+    $p = Auth::requireProfile();
+    ok(['items' => DB::all('SELECT id, topic, text FROM content_items WHERE profile_id = ? AND status = ? ORDER BY created_at DESC',
+        [$p['id'], 'approved'])]);
     break;
 
 default:

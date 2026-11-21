@@ -20,7 +20,11 @@ return [
     // Hashed with password_hash(). setup.php writes this; never store plaintext.
     'family_password_hash' => '',
 
-    // Monthly AI generation cap (Phase 2 reads this; unused in Phase 1).
+    // Anthropic API key for AI "made for you" passages. Leave '' to keep that
+    // feature off; add your key (with its own spend limit) to turn it on.
+    'anthropic_api_key' => '',
+
+    // Monthly cap on AI-generated passages (cost control).
     'ai_month_cap' => 200,
 
     // Lockout policy for profile PINs.
