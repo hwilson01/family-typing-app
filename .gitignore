@@ -1,0 +1,12 @@
+# Planning doc — contains family names; keep out of the public repo.
+PLAN.md
+
+# Secrets + local data — never commit these.
+api/config.php
+db/*.sqlite
+*.log
+.DS_Store
+
+# Build output
+dist/
+*.zip

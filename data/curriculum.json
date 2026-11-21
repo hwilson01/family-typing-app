@@ -1,0 +1,683 @@
+{
+  "schema_version": 1,
+  "generated": "2026-11-21",
+  "layout": "us_qwerty",
+  "pass_threshold_default": 0.9,
+  "fingers": {
+    "l_pinky": [
+      "`",
+      "1",
+      "q",
+      "a",
+      "z",
+      "Tab",
+      "CapsLock",
+      "LShift"
+    ],
+    "l_ring": [
+      "2",
+      "w",
+      "s",
+      "x"
+    ],
+    "l_middle": [
+      "3",
+      "e",
+      "d",
+      "c"
+    ],
+    "l_index": [
+      "4",
+      "r",
+      "f",
+      "v",
+      "5",
+      "t",
+      "g",
+      "b"
+    ],
+    "r_index": [
+      "6",
+      "y",
+      "h",
+      "n",
+      "7",
+      "u",
+      "j",
+      "m"
+    ],
+    "r_middle": [
+      "8",
+      "i",
+      "k",
+      ","
+    ],
+    "r_ring": [
+      "9",
+      "o",
+      "l",
+      "."
+    ],
+    "r_pinky": [
+      "0",
+      "p",
+      ";",
+      "/",
+      "-",
+      "=",
+      "[",
+      "]",
+      "'",
+      "RShift",
+      "Enter",
+      "Backspace"
+    ],
+    "thumb": [
+      "Space"
+    ]
+  },
+  "finger_colors": {
+    "l_pinky": "#e8613c",
+    "l_ring": "#e8a33c",
+    "l_middle": "#4fb06d",
+    "l_index": "#3c9ae8",
+    "r_index": "#6b6be8",
+    "r_middle": "#b05fd8",
+    "r_ring": "#d85f9e",
+    "r_pinky": "#e8613c",
+    "thumb": "#8a8f98"
+  },
+  "stages": [
+    "home",
+    "top",
+    "bottom",
+    "shift",
+    "punct",
+    "number",
+    "fluency"
+  ],
+  "lessons": [
+    {
+      "order": 1,
+      "stage": "home",
+      "title": "Meet f and j",
+      "new_keys": [
+        "f",
+        "j"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Rest your pointer fingers on f and j. Feel the little bumps.",
+          "text": "fff jjj fj jf fjf jfj"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Tap gently, one finger at a time.",
+          "text": "ffjj jjff fjfj jfjf ffj jjf"
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "stage": "home",
+      "title": "Add d and k",
+      "new_keys": [
+        "d",
+        "k"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Middle fingers reach for d and k.",
+          "text": "ddd kkk dk kd dkd kdk"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Mix the new keys with f and j.",
+          "text": "fjdk dkfj jkfd kdjf fdjk"
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "stage": "home",
+      "title": "Add s and l",
+      "new_keys": [
+        "s",
+        "l"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Ring fingers find s and l.",
+          "text": "sss lll sl ls sls lsl"
+        },
+        {
+          "kind": "mix",
+          "prompt": "All eight pointer, middle and ring keys.",
+          "text": "fjdksl sldkfj lsjf dsfk"
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "stage": "home",
+      "title": "Add a and ;",
+      "new_keys": [
+        "a",
+        ";"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Pinky fingers rest on a and the ; key.",
+          "text": "aaa ;;; a; ;a a;a ;a;"
+        },
+        {
+          "kind": "mix",
+          "prompt": "The whole home row, left to right.",
+          "text": "asdf jkl; asdf jkl; a;sl dkfj"
+        },
+        {
+          "kind": "words",
+          "prompt": "Your first real words!",
+          "text": "ask dad fad lass fall all as ad; a sad lad; dad asks"
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "stage": "home",
+      "title": "Add g and h",
+      "new_keys": [
+        "g",
+        "h"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Pointer fingers stretch in for g and h.",
+          "text": "ggg hhh gh hg ghg hgh gf hj"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Full home row now.",
+          "text": "asdfg hjkl; ghgh asdf jkl;"
+        },
+        {
+          "kind": "words",
+          "prompt": "Home-row words.",
+          "text": "gas hall glass flask salad half dash flag lash shall; dad has a glass"
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "stage": "top",
+      "title": "Reach up to e and i",
+      "new_keys": [
+        "e",
+        "i"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Middle fingers reach up to e and i.",
+          "text": "eee iii ei ie ded kik"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Reach up, then back to home.",
+          "text": "ed ik de ki fie die hie lie sie"
+        },
+        {
+          "kind": "words",
+          "prompt": "New words open up.",
+          "text": "like file deal idea hike lake shelf she safe field; she had a safe deal"
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "stage": "top",
+      "title": "Reach up to r and u",
+      "new_keys": [
+        "r",
+        "u"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Pointer fingers reach up to r and u.",
+          "text": "rrr uuu ru ur frf juj"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Mix the reaches.",
+          "text": "fr ju rf uj rue sur dur hur"
+        },
+        {
+          "kind": "words",
+          "prompt": "Build real words.",
+          "text": "sure rude fire ride user real dark hair fair; her ride is sure"
+        }
+      ]
+    },
+    {
+      "order": 8,
+      "stage": "top",
+      "title": "Reach up to t and y",
+      "new_keys": [
+        "t",
+        "y"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Pointer fingers stretch to t and y.",
+          "text": "ttt yyy ty yt ftf jyj"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Mix t and y with the row.",
+          "text": "tr yu ty rt uy early dirty style"
+        },
+        {
+          "kind": "words",
+          "prompt": "Longer words.",
+          "text": "tray stay they tidy tired treat yeast early; try a tidy desk"
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "stage": "top",
+      "title": "Reach up to w and o",
+      "new_keys": [
+        "w",
+        "o"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Ring fingers reach up to w and o.",
+          "text": "www ooo wo ow sws lol"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Mix w and o in.",
+          "text": "we ow wo so lo row low how owl sow"
+        },
+        {
+          "kind": "words",
+          "prompt": "Words with o.",
+          "text": "work word slow flower world those what their; we work slow today"
+        }
+      ]
+    },
+    {
+      "order": 10,
+      "stage": "top",
+      "title": "Reach up to q and p",
+      "new_keys": [
+        "q",
+        "p"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Pinky fingers reach up to q and p.",
+          "text": "qqq ppp qp pq aqa ;p;"
+        },
+        {
+          "kind": "mix",
+          "prompt": "The whole top row.",
+          "text": "qwert yuiop quip piqu paper equip"
+        },
+        {
+          "kind": "words",
+          "prompt": "Top and home together.",
+          "text": "quit quiet paper equip people power proud pride; quit while you are ahead"
+        }
+      ]
+    },
+    {
+      "order": 11,
+      "stage": "bottom",
+      "title": "Reach down to v and m",
+      "new_keys": [
+        "v",
+        "m"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Pointer fingers reach down to v and m.",
+          "text": "vvv mmm vm mv fvf jmj"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Mix the down-reach.",
+          "text": "av em vo mu move very same"
+        },
+        {
+          "kind": "words",
+          "prompt": "Words with v and m.",
+          "text": "move movie very value image medium remove; move the movie over"
+        }
+      ]
+    },
+    {
+      "order": 12,
+      "stage": "bottom",
+      "title": "Reach down to c and n",
+      "new_keys": [
+        "c",
+        "n"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Middle and pointer fingers reach down to c and n.",
+          "text": "ccc nnn cn nc dcd jnj"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Mix c and n.",
+          "text": "ca ne co nu ice can once nice"
+        },
+        {
+          "kind": "words",
+          "prompt": "More words.",
+          "text": "nice once dance clean canoe ocean nickel cousin; once we had a nice canoe"
+        }
+      ]
+    },
+    {
+      "order": 13,
+      "stage": "bottom",
+      "title": "Reach down to x and b",
+      "new_keys": [
+        "x",
+        "b"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Ring and pointer fingers reach down to x and b.",
+          "text": "xxx bbb xb bx sxs fbf"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Mix x and b.",
+          "text": "ax eb ox bu box fix able bake"
+        },
+        {
+          "kind": "words",
+          "prompt": "Almost every letter!",
+          "text": "box fix able bake table number beach object before; fix the broken box"
+        }
+      ]
+    },
+    {
+      "order": 14,
+      "stage": "bottom",
+      "title": "Reach down to z",
+      "new_keys": [
+        "z"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Left pinky reaches down to z. One new key, then a big review.",
+          "text": "zzz az za sz zs zip zoo"
+        },
+        {
+          "kind": "words",
+          "prompt": "Words with z.",
+          "text": "zip zoo zebra size lazy prize dozen buzz amazing"
+        },
+        {
+          "kind": "sentence",
+          "prompt": "Every letter of the alphabet in one line.",
+          "text": "the quick brown fox jumps over a lazy dog"
+        }
+      ]
+    },
+    {
+      "order": 15,
+      "stage": "shift",
+      "title": "Left Shift for CAPITALS",
+      "new_keys": [
+        "LShift"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Hold Left Shift with your pinky, then tap a right-hand letter.",
+          "text": "Hi Jo Ki Lo Up In On My No Hu"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Opposite hands: left shift, right letter.",
+          "text": "Harry Jill Kim Lily Uma Nina Oscar Milo"
+        },
+        {
+          "kind": "words",
+          "prompt": "Capital letters start names.",
+          "text": "Nina met Oscar and Jill likes Kim Milo and Uma ran up"
+        }
+      ]
+    },
+    {
+      "order": 16,
+      "stage": "shift",
+      "title": "Right Shift for CAPITALS",
+      "new_keys": [
+        "RShift"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Hold Right Shift, then tap a left-hand letter.",
+          "text": "As Be Cat Dog Ever Fox Go Red Tea Van"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Opposite hands: right shift, left letter.",
+          "text": "Amy Ben Cara Dan Finn Gus Rex Tess Walt"
+        },
+        {
+          "kind": "words",
+          "prompt": "Capitalize every word.",
+          "text": "A Big Red Fox The Grey Cat We Are Done Now"
+        }
+      ]
+    },
+    {
+      "order": 17,
+      "stage": "punct",
+      "title": "Period and comma",
+      "new_keys": [
+        ".",
+        ","
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Right ring taps the period, right middle taps the comma.",
+          "text": "l. k, l. k, end. yes, no, ok."
+        },
+        {
+          "kind": "sentence",
+          "prompt": "Now sentences can stop and pause.",
+          "text": "The cat sat. The dog ran, and she won. We ate, then we slept."
+        }
+      ]
+    },
+    {
+      "order": 18,
+      "stage": "punct",
+      "title": "Apostrophe and question mark",
+      "new_keys": [
+        "'",
+        "?"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Right pinky taps ' and (with shift) the ? key.",
+          "text": "it's I'm can't who? why? how?"
+        },
+        {
+          "kind": "sentence",
+          "prompt": "Ask a question, use a contraction.",
+          "text": "Who is it? It's Max. Can't you see? I'm sure it's fine."
+        }
+      ]
+    },
+    {
+      "order": 19,
+      "stage": "punct",
+      "title": "Exclamation and hyphen",
+      "new_keys": [
+        "!",
+        "-"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "! is Shift and 1. The hyphen joins words.",
+          "text": "Wow! Go! Stop! well-made top-notch ten-year-old"
+        },
+        {
+          "kind": "sentence",
+          "prompt": "Add some excitement.",
+          "text": "Watch out! That was a well-timed, top-notch move! Great job!"
+        }
+      ]
+    },
+    {
+      "order": 20,
+      "stage": "number",
+      "title": "Numbers 1 2 3 4 5",
+      "new_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Reach up to the number row with the left hand.",
+          "text": "123 234 345 11 22 33 44 55 1 2 3 4 5"
+        },
+        {
+          "kind": "mix",
+          "prompt": "Mix numbers and letters.",
+          "text": "a1 s2 d3 f4 g5 on 1 day; 3 cats and 2 dogs; 45 pages"
+        }
+      ]
+    },
+    {
+      "order": 21,
+      "stage": "number",
+      "title": "Numbers 6 7 8 9 0",
+      "new_keys": [
+        "6",
+        "7",
+        "8",
+        "9",
+        "0"
+      ],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "intro",
+          "prompt": "Reach up with the right hand.",
+          "text": "678 789 890 66 77 88 99 00 6 7 8 9 0"
+        },
+        {
+          "kind": "mix",
+          "prompt": "All ten numbers now.",
+          "text": "j6 k7 l8 90 the year 2026; 100 steps; 7 of 10; 9 to 5"
+        }
+      ]
+    },
+    {
+      "order": 22,
+      "stage": "fluency",
+      "title": "Common words sprint",
+      "new_keys": [],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "words",
+          "prompt": "Type the words you use most, smoothly.",
+          "text": "the and you that was for are with his they have this from word what some"
+        },
+        {
+          "kind": "words",
+          "prompt": "Keep a steady rhythm.",
+          "text": "when your said each which them then many these would write like into time has"
+        }
+      ]
+    },
+    {
+      "order": 23,
+      "stage": "fluency",
+      "title": "Full sentences",
+      "new_keys": [],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "sentence",
+          "prompt": "Capitals, spaces and periods together.",
+          "text": "She opened the door and looked outside. The rain had stopped at last."
+        },
+        {
+          "kind": "sentence",
+          "prompt": "Pause at the commas.",
+          "text": "After lunch, we walked to the park, fed the ducks, and headed home."
+        }
+      ]
+    },
+    {
+      "order": 24,
+      "stage": "fluency",
+      "title": "A short paragraph",
+      "new_keys": [],
+      "pass_threshold": 0.9,
+      "steps": [
+        {
+          "kind": "sentence",
+          "prompt": "Your longest type yet. Take your time.",
+          "text": "A good typist does not look at the keys. She keeps her eyes on the words and lets her fingers find their way home. Speed comes later; first comes a calm, steady hand."
+        }
+      ]
+    }
+  ]
+}
